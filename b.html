@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR with Tesseract.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #output {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OCR Demo</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', async function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const outputDiv = document.getElementById('output');
+                outputDiv.textContent = 'Processing... Please wait.';
+                
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const imageUrl = e.target.result;
+                    
+                    try {
+                        const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng', {
+                            logger: info => console.log(info) // Logs progress to console
+                        });
+                        outputDiv.textContent = text;
+                    } catch (error) {
+                        outputDiv.textContent = `Error: ${error.message}`;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>
