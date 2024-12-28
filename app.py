@@ -54,7 +54,7 @@ X_train_ridge = ridge_selector.transform(X_train)
 X_test_ridge = ridge_selector.transform(X_test)
 
 elastic_net_selector = SelectFromModel(
-    SGDClassifier(loss="log", penalty="elasticnet", l1_ratio=l1_ratio, random_state=42)
+    SGDClassifier(loss="log_loss", penalty="elasticnet", l1_ratio=l1_ratio, random_state=42)
 )
 elastic_net_selector.fit(X_train, y_train)
 X_train_elastic_net = elastic_net_selector.transform(X_train)
