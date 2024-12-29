@@ -1,65 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCR with Camera</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@latest"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        #output {
-            margin-top: 20px;
-            white-space: pre-wrap;
-            background: #f4f4f4;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #preview {
-            margin-top: 20px;
-            max-width: 100%;
-            height: auto;
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR with Preprocessing</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js/dist/tesseract.min.js"></script>
+  <script src="https://docs.opencv.org/4.x/opencv.js"></script>
 </head>
 <body>
-    <h1>OCR Demo with Camera</h1>
-    <input type="file" id="cameraInput" accept="image/*" capture="environment">
-    <img id="preview" alt="Captured Image">
-    <div id="output"></div>
+  <h1>Advanced OCR with Preprocessing</h1>
 
-    <script>
-        document.getElementById('cameraInput').addEventListener('change', async function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const outputDiv = document.getElementById('output');
-                const previewImage = document.getElementById('preview');
-                outputDiv.textContent = 'Processing... Please wait.';
-                
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const imageUrl = e.target.result;
+  <div>
+    <video id="video" autoplay></video>
+    <button id="capture">Capture</button>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <canvas id="processedCanvas"></canvas>
+  </div>
 
-                    // Display the captured image
-                    previewImage.src = imageUrl;
-                    previewImage.style.display = 'block';
+  <div>
+    <h2>Extracted Text:</h2>
+    <p id="output">No text detected yet.</p>
+  </div>
 
-                    try {
-                        const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng', {
-                            logger: info => console.log(info) // Logs progress to console
-                        });
-                        outputDiv.textContent = text;
-                    } catch (error) {
-                        outputDiv.textContent = `Error: ${error.message}`;
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    </script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const processedCanvas = document.getElementById('processedCanvas');
+    const captureButton = document.getElementById('capture');
+    const output = document.getElementById('output');
+    const context = canvas.getContext('2d');
+    const processedContext = processedCanvas.getContext('2d');
+
+    // Access the device camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        console.error('Error accessing camera: ', err);
+      });
+
+    // Capture and preprocess image
+    captureButton.addEventListener('click', () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      preprocessImage(canvas.toDataURL('image/png'));
+    });
+
+    function preprocessImage(imageData) {
+      const img = new Image();
+      img.onload = () => {
+        processedCanvas.width = img.width;
+        processedCanvas.height = img.height;
+
+        // Preprocess image with OpenCV.js
+        const src = cv.imread(img);
+        const dst = new cv.Mat();
+        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY); // Convert to grayscale
+        cv.threshold(dst, dst, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU); // Apply thresholding
+        cv.imshow(processedCanvas, dst);
+
+        // Perform OCR on the processed image
+        const processedImageData = processedCanvas.toDataURL('image/png');
+        performOCR(processedImageData);
+
+        src.delete();
+        dst.delete();
+      };
+      img.src = imageData;
+    }
+
+    function performOCR(imageData) {
+      output.textContent = 'Processing...';
+
+      Tesseract.recognize(
+        imageData,
+        'eng', // Language code
+        {
+          logger: info => console.log(info) // Logs OCR progress
+        }
+      ).then(({ data: { text } }) => {
+        output.textContent = text.trim() || 'No text detected.';
+      }).catch(err => {
+        console.error('Error during OCR: ', err);
+        output.textContent = 'Error during OCR. Please try again.';
+      });
+    }
+  </script>
 </body>
 </html>
