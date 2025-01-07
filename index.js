@@ -2,7 +2,6 @@
 const { initializeApp } = require("firebase/app");
 const { getDatabase, ref, get, update } = require("firebase/database");
 
-
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBXmdv_Zzf0Q2PUo21zZbwMU9zqaVBJ4GA",
@@ -14,7 +13,7 @@ const firebaseConfig = {
   appId: "1:1092374967243:web:9da6f10eff2564e8ab3c4e",
   measurementId: "G-C3C5L3XQTN"
 };
-//
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
@@ -22,25 +21,27 @@ const database = getDatabase(app);
 // Reference to the target path in Realtime Database
 const targetPath = ref(database, "MyUsers/tBoLiXG9dyYmk0AZTL1afRDcLQ92/points/received");
 
-// Function to add 20 to the current value
-async function incrementPoints() {
-  try {
-    // Fetch the current value of 'received'
-    const snapshot = await get(targetPath);
-    if (snapshot.exists()) {
-      const currentPoints = snapshot.val();
-      const newPoints = currentPoints + 20;
+// Vercel handler function
+module.exports = async (req, res) => {
+  if (req.method === "GET") {
+    try {
+      // Fetch the current value of 'received'
+      const snapshot = await get(targetPath);
+      if (snapshot.exists()) {
+        const currentPoints = snapshot.val();
+        const newPoints = currentPoints + 20;
 
-      // Update the value in the database
-      await update(ref(database, "MyUsers/tBoLiXG9dyYmk0AZTL1afRDcLQ92/points"), { received: newPoints });
-      console.log(`Points updated successfully: ${newPoints}`);
-    } else {
-      console.log("No data found at the specified path.");
+        // Update the value in the database
+        await update(ref(database, "MyUsers/tBoLiXG9dyYmk0AZTL1afRDcLQ92/points"), { received: newPoints });
+        return res.status(200).json({ message: `Points updated successfully`, points: newPoints });
+      } else {
+        return res.status(404).json({ error: "No data found at the specified path." });
+      }
+    } catch (error) {
+      console.error("Error updating points:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
     }
-  } catch (error) {
-    console.error("Error updating points:", error);
+  } else {
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
-}
-
-// Call the function
-incrementPoints();
+};
