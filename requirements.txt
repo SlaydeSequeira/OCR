@@ -3,3 +3,6 @@ pandas
 scikit-learn
 matplotlib
 umap-learn
+google-generativeai
+pillow
+requests
